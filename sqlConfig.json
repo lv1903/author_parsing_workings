@@ -1,0 +1,6 @@
+{ 
+"dbname":"testdb",
+"user": "postgres",
+"host": "localhost",
+"dbpass": "aberdare"
+}
