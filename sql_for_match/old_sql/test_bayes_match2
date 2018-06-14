@@ -1,0 +1,43 @@
+truncate match_name;
+
+with 
+
+exact_match as (  
+	select 
+		ap1.author_id as asid1,
+		ap1.paper_id as pid1,
+		ap2.author_id as asid2,
+		ap2.paper_id as pid2
+	from author_paper ap1
+	cross join author_paper ap2
+	where
+		ap1.author_id = ap2.author_id     -- author string same
+		and ap1.paper_id != ap2.paper_id  -- but different papers
+	limit 2
+)
+
+insert into match_name select * from exact_match;
+
+with
+
+variant_match as (
+	select 
+		ap1.author_id as asid1,
+		ap1.paper_id as pid1,
+-- 		av.asid1,
+-- 		av.asid2 as vid,
+		ap2.author_id as asid2,
+		ap2.paper_id as pid2
+	from author_paper ap1
+	cross join author_paper ap2
+	join author_variant av on ap1.author_id = av.asid1
+	where
+		ap1.author_id != ap2.author_id    -- author string different
+		and av.asid2 = ap2.author_id      -- but author string variant matches
+		and ap1.paper_id != ap2.paper_id  -- and they are different papers
+	limit 2
+)
+
+insert into match_name select * from variant_match
+
+

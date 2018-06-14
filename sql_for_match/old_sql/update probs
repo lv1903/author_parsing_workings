@@ -1,0 +1,149 @@
+-- create table new_match_prob (
+-- 	asid1 integer,
+-- 	pid1 integer,
+-- 	asid2 integer, 
+-- 	pid2 integer,
+-- 	prob numeric
+-- );
+
+
+truncate new_match_prob;
+
+
+------------------------------------------------------
+-- update name match default p = 0.25
+
+with prob_match as (
+	select 
+	*,
+	.25 as prob
+	from match_name
+)
+
+insert into new_match_prob select * from prob_match;
+
+
+------------------------------------------------------
+-- update coauthor match tp = 0.5 and fp = 0.1
+
+with evidence as (
+	select 
+		mp.asid1,
+		mp.pid1,
+		mp.asid2, 
+		mp.pid2,
+		mp.prob
+	from 
+		new_match_prob mp	
+	join
+		match_coauthor e on mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2
+)
+
+update 
+	new_match_prob mp
+set 
+	prob = (0.5 * mp.prob)/((0.5 * mp.prob)+(0.1 * (1 - mp.prob)))	
+from
+	evidence e
+where 
+	mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2	
+;
+
+------------------------------------------------------
+-- update research area match tp = 0.5 and fp = 0.2
+
+with evidence as (
+	select 
+		mp.asid1,
+		mp.pid1,
+		mp.asid2, 
+		mp.pid2,
+		mp.prob
+	from 
+		new_match_prob mp	
+	join
+		match_research_area e on mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2
+)
+
+update 
+	new_match_prob mp
+set 
+	prob = (0.5 * mp.prob)/((0.5 * mp.prob)+(0.2 * (1 - mp.prob)))	
+from
+	evidence e
+where 
+	mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2	
+;
+
+------------------------------------------------------
+-- update subject match tp = 0.5 and fp = 0.01
+
+with evidence as (
+	select 
+		mp.asid1,
+		mp.pid1,
+		mp.asid2, 
+		mp.pid2,
+		mp.prob
+	from 
+		new_match_prob mp	
+	join
+		match_subject e on mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2
+)
+
+update 
+	new_match_prob mp
+set 
+	prob = (0.5 * mp.prob)/((0.5 * mp.prob)+(0.01 * (1 - mp.prob)))	
+from
+	evidence e
+where 
+	mp.asid1 = e.asid1 and mp.pid1 = e.pid1 and mp.asid2 = e.asid2 and mp.pid2 = e.pid2	
+;
+
+
+----------------------------------------
+-- insert into match prob
+
+--truncate match_prob;
+insert into 
+	match_prob
+select
+	* 
+from 
+	new_match_prob
+;
+
+----------------------------------------------
+--remove duplicates
+delete from 
+	match_prob T1
+using   
+	match_prob T2
+where   
+	T1.ctid < T2.ctid  -- delete the older versions
+    and T1.asid1  = T2.asid1
+	and T1.pid1 = T2.pid1
+	and T1.asid2 = T2.asid2
+	and T1.pid2 = T2.pid2	
+
+;
+------------------------------------------------------
+select 
+	round(mp.prob, 2) as prob,
+	mp.asid1,
+	mp.asid2,
+	mp.pid1,
+	mp.pid2,
+	a1.name as name1,
+	a2.name as name2,
+	p1.title as title1,
+	p2.title as title2
+from match_prob mp
+join author a1 on mp.asid1 = a1.id
+join author a2 on mp.asid2 = a2.id
+join paper p1 on mp.pid1 = p1.id
+join paper p2 on mp.pid2 = p2.id
+where prob > .81
+
+--limit 10

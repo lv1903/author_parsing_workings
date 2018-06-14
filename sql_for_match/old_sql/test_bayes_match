@@ -1,0 +1,143 @@
+
+-- create table author_separated as (select 'a' as joinner, id as author_id,
+-- lower(split_part(name, ' ', 1)) as first_name,
+-- lower(substring(split_part(name, ' ', 1), 1,1)) as initial_first_name,
+-- lower(split_part(name, ' ', size_name)) as surname
+-- from 
+-- (select id, name, array_length(string_to_array(name, ' '),1) as size_name from author) as a)
+
+----------------------------------------------
+
+-- create table author_variants as (select as1.author_id as author_id1,
+--  	   as2.author_id as author_id2,
+--  	   as1.first_name as firstname1,
+--  	   as2.first_name as firstname2,
+--  	   as1.surname as lastname1,
+--  	   as2.surname as lastname2
+--  from (author_separated as1 join author_separated as2 on as1.joinner = as2.joinner)
+--  where as1.initial_first_name like concat('%', as2.initial_first_name, '%')
+--   and as1.surname = as2.surname
+-- )
+
+------------------------------------------------
+
+with 
+
+new_authors as (
+select 
+	ap.author_id,
+	ap.paper_id
+from author_paper ap
+join author_separated asep on ap.author_id = asep.author_id
+where asep.first_name = 'mark' and asep.surname = 'jones'
+),
+
+match_prob_name as (
+select 
+	av.author_id1,
+	na.paper_id as paper_id1,
+	av.author_id2,
+	ap.paper_id as paper_id2,
+	0.25 as prob
+from new_authors na
+join author_variants av on na.author_id = av.author_id1
+join author_paper ap on av.author_id2 = ap.author_id
+)
+
+
+-- select
+-- 	mpn.author_id1,                     -- 1 source author
+-- 	mpn.paper_id1,                      -- 1 source paper
+-- 	ap1.author_id as coauthor_id1,      -- 2 source coauthor
+-- -- 	av1.author_id2 as co_var_id1,       -- 4 variation on source coauthor
+-- 	mpn.author_id2,                     -- 1 target author
+-- 	mpn.paper_id2,                      -- 1 target paper
+-- 	ap2.author_id as coauthor_id2	    -- 3 target coauthor
+-- -- 	av2.author_id2 as co_var_id2        -- 5 variation on target coauthor	
+-- from 
+-- 	match_prob_name mpn                                         -- 1 get potential matches
+-- 	join author_paper ap1 on mpn.paper_id1 = ap1.paper_id       -- 2 add all authors for paper 1
+-- 	join author_paper ap2 on mpn.paper_id2 = ap2.paper_id       -- 3 add all authors for paper 2
+-- where
+-- 	mpn.paper_id1 != mpn.paper_id2        -- must be from two different papers
+-- 	and ap1.author_id != mpn.author_id1   -- coauthor 1 and author 1 cannot be the same
+-- 	and ap2.author_id != mpn.author_id2   -- coauthor 2 and author 2 cannot be the same
+	
+-- limit 10
+
+
+-----this works to match coauthors but takes too long
+select 
+	mpn.author_id1,                     -- 1 source author
+	mpn.paper_id1,                      -- 1 source paper
+	ap1.author_id as coauthor_id1,      -- 2 source coauthor
+	av1.author_id2 as co_var_id1,       -- 4 variation on source coauthor
+	mpn.author_id2,                     -- 1 target author
+	mpn.paper_id2,                      -- 1 target paper
+	ap2.author_id as coauthor_id2,	    -- 3 target coauthor
+	av2.author_id2 as co_var_id2        -- 5 variation on target coauthor	
+from 
+	match_prob_name mpn                                         -- 1 get potential matches
+	join author_paper ap1 on mpn.paper_id1 = ap1.paper_id       -- 2 add all authors for paper 1
+	join author_paper ap2 on mpn.paper_id2 = ap2.paper_id       -- 3 add all authors for paper 2
+	join author_variants av1 on ap1.author_id = av1.author_id1  -- 4 add all variations on coauthors 1
+	join author_variants av2 on ap2.author_id = av2.author_id1  -- 5 add all variations on coauthors 2
+where 
+	mpn.paper_id1 != mpn.paper_id2        -- must be from two different papers
+	and ap1.author_id != mpn.author_id1   -- coauthor 1 and author 1 cannot be the same
+	and ap2.author_id != mpn.author_id2   -- coauthor 2 and author 2 cannot be the same
+	and av1.author_id2 = av2.author_id2   -- coauthor variants must match
+	
+-- limit 1
+-- 	and ap1.author_id != av1.author_id2 
+
+
+
+
+-- select
+	
+-- from author_paper ap1
+-- cross join author_paper ap2
+
+
+
+
+
+
+
+
+
+
+
+
+
+--create table author_match as
+
+--select 
+--	.25 as prob,
+--	av.author_id1,
+--	ap1.paper_id as paper_id1,
+--	av.author_id2,
+--	ap2.paper_id as paper_id2
+--from author_variants av
+--left join author_paper ap1 on av.author_id1 = ap1.  
+--left join author_paper ap2 on av.author_id2 = ap2.author_id
+
+
+
+
+-- select *
+-- from (match_prob_0 mp join author_variants av on (mp.author_id1 = av.author_id1 and mp.author_id2 = av.author_id2))
+
+
+
+
+
+ 
+ 
+--  select ap1.author_id as author_id,
+--  ap2.author_id as cauthor_id,
+--  ap1.paper_id as paper_id
+--  from author_paper ap1 join author_paper ap2 on ap1.paper_id = ap2.paper_id
+--  where ap1.author_id != ap2.author_id
+--   limit 10
